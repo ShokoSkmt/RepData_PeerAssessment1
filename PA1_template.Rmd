@@ -19,8 +19,8 @@ rd <- read.csv(unz("activity.zip", "activity.csv"),na.strings = "NA")
 rd_day <- aggregate(rd[1], rd[2], sum)
 xmin <- min(rd_day[2],na.rm=TRUE)
 xmax <- max(rd_day[2],na.rm=TRUE)
-xt <- "total number of steps"
-yt <- "day(s)"
+xt <- "Total number of steps"
+yt <- "Day(s)"
 mt <- "Total number of steps taken each day" 
 hist(rd_day[is.na(rd_day[2])==FALSE,2], breaks="fd",xlim=c(xmin, xmax), 
      main = mt, xlab= xt, ylab=yt, col="Dark Blue")
@@ -28,7 +28,7 @@ hist(rd_day[is.na(rd_day[2])==FALSE,2], breaks="fd",xlim=c(xmin, xmax),
 
 
 2. the mean and median total number of steps taken per day
-```{r meanmedian, echo=TRUE, results='asis'}
+```{r meanmedian, echo=TRUE, results='hide'}
 mn <- as.integer(mean(rd_day$steps, na.rm=TRUE))
 md <- as.integer(median(rd_day$steps, na.rm=TRUE))
 ```
@@ -38,8 +38,8 @@ Mean is **`r mn`** and Median is **`r md`**
 1. A time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
 ```{r timeseries, echo=TRUE, results='asis'}
 rd_time <- aggregate(rd[1], rd[3], mean, na.rm=TRUE)
-xt <- "time of day"
-yt <- "number of steps"
+xt <- "Time of the day"
+yt <- "Number of steps"
 mt <- "Average number of steps of each 5-minutes interval of the day" 
 plot(rd_time[,1], rd_time[,2], type='l',main = mt, xlab= xt, ylab=yt
      ,col = "dark blue", lwd = 2)
@@ -57,12 +57,13 @@ maxtime <- sprintf("%02d:%02d", as.numeric(maxtime) %/% 100, as.numeric(maxtime)
 1. Calculate the total number of missing values in the dataset
 ```{r nanumber, echo=TRUE, results='hide'}
 NAs <- nrow(rd[is.na(rd[1])==TRUE,])
+TN <- nrow(rd[,])
 ```
-Total number of missing values is **`r NAs`**
+Total number of missing values is **`r NAs`** out of **`r TN`**
 
 2. Devise a strategy for filling in all of the missing values in the dataset.
 
-- **Use the mean for 5-minute interval to impute missing data**
+- **Use the mean for 5-minute interval to impute missing values**
 
 3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
@@ -82,15 +83,15 @@ ipdata[is.na(ipdata[2])==TRUE,2] <- ipdata[is.na(ipdata[2])==TRUE,4]
 ```
 
 4. Histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
-```{r ihist, echo=TRUE, results='hide'}
+```{r ihist, echo=TRUE, results='asis'}
 ip_day <- aggregate(ipdata[2], ipdata[3], sum)
 xmin <- min(ip_day[2])
 xmax <- max(ip_day[2])
-xt <- "total number of steps"
-yt <- "number of days"
+xt <- "Total number of steps"
+yt <- "Day(s)"
 mt <- "Histogram of total number of steps taken each day" 
 names(ip_day) = c("date", "steps")
-hist(ip_day[is.na(rd_day[2])==FALSE,2], breaks="fd",xlim=c(xmin, xmax), 
+hist(ip_day[,2], breaks="fd",xlim=c(xmin, xmax), 
      main = mt, xlab= xt, ylab=yt, col="Dark Red")
 ## mean and median after imputing
 imn <- as.integer(mean(ip_day$steps))
@@ -104,7 +105,7 @@ Mean is **`r imn`** and Median is **`r imd`**
 
 5. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
-**There is no significant difference of mean and median between before imputing and after inputing. As well, the shapa of Histogram is very alike. There is no impact of imputing of using the mean for 5-minute interval.**
+**There is no significant difference of Mean and Median between before imputing and after imputing. As well, the shape of Histogram is very alike. There is no impact of imputing NA values by using the mean of steps for 5-minute interval.**
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -123,18 +124,13 @@ dt_ip <- as.data.frame(merge(dt2, dt_ip2))
 
 
 2. Make a panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
-```{r weektimedata, echo=TRUE, results='hide'}
+```{r weektimedata, echo=TRUE, results='asis'}
 ## calculate steps by interval and weekday or weekend
+library(ggplot2)
 dt_time_week <- aggregate(dt_ip[3], c(dt_ip[4],dt_ip[2]), mean)
-par(mfrow=c(1,2))
-v_week <- "weekday"
-xt <- "time of day"
-yt <- "number of steps"
-mt <- paste(v_week, "- Average number of steps of \neach 5-minutes interval")
-plot(dt_time_week[dt_time_week[,1]==v_week,2], dt_time_week[dt_time_week[,1]==v_week,3], type='l',main = mt, ylim=c(0,250), cex.main=1, col="dark red", xlab= xt, ylab=yt)
-
-v_week <- "weekend"
-mt <- paste(v_week, "- Average number of steps of \neach 5-minutes interval") 
-plot(dt_time_week[dt_time_week[,1]==v_week,2], dt_time_week[dt_time_week[,1]==v_week,3], type='l',main = mt, ylim=c(0,250), cex.main=1, col="dark red", xlab= xt, ylab=yt)
-
+xt <- "Time of the day"
+yt <- "Number of steps"
+mt <- "Average number of steps of \neach 5-minutes interval of the day"
+names(dt_time_week) = c("week", "interval", "steps")
+ggplot(dt_time_week, aes(interval, steps,col=week)) + facet_wrap(~week,nrow=2) + geom_line(aes(group=week)) + labs(x=xt, y= yt, title =mt) + theme(legend.position = "none") + scale_color_manual(values = c("black", "red"))
 ```
