@@ -6,20 +6,135 @@ output:
 ---
 
 
-## Loading and preprocessing the data
-
+## Loading and preprocessing data
+1. Loading data
+```{r loaddata, echo=TRUE, results='hide'}
+rd <- read.csv(unz("activity.zip", "activity.csv"),na.strings = "NA")
+```
 
 
 ## What is mean total number of steps taken per day?
+1. Histogram of the total number of steps taken each day
+```{r histgram, echo=TRUE, results='asis'}
+rd_day <- aggregate(rd[1], rd[2], sum)
+xmin <- min(rd_day[2],na.rm=TRUE)
+xmax <- max(rd_day[2],na.rm=TRUE)
+xt <- "total number of steps"
+yt <- "day(s)"
+mt <- "Total number of steps taken each day" 
+hist(rd_day[is.na(rd_day[2])==FALSE,2], breaks="fd",xlim=c(xmin, xmax), 
+     main = mt, xlab= xt, ylab=yt, col="Dark Blue")
+```
 
 
+2. the mean and median total number of steps taken per day
+```{r meanmedian, echo=TRUE, results='asis'}
+mn <- as.integer(mean(rd_day$steps, na.rm=TRUE))
+md <- as.integer(median(rd_day$steps, na.rm=TRUE))
+```
+Mean is **`r mn`** and Median is **`r md`**  
 
 ## What is the average daily activity pattern?
+1. A time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r timeseries, echo=TRUE, results='asis'}
+rd_time <- aggregate(rd[1], rd[3], mean, na.rm=TRUE)
+xt <- "time of day"
+yt <- "number of steps"
+mt <- "Average number of steps of each 5-minutes interval of the day" 
+plot(rd_time[,1], rd_time[,2], type='l',main = mt, xlab= xt, ylab=yt
+     ,col = "dark blue", lwd = 2)
+```
 
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r maxtimes, echo=TRUE, results='hide'}
+maxtime <- rd_time[rd_time[2]==max(rd_time[2]),1]
+maxtime <- sprintf("%02d:%02d", as.numeric(maxtime) %/% 100, as.numeric(maxtime) %% 60)
+```
+**`r maxtime`** contains the maximum numbers of steps   
 
 
 ## Imputing missing values
+1. Calculate the total number of missing values in the dataset
+```{r nanumber, echo=TRUE, results='hide'}
+NAs <- nrow(rd[is.na(rd[1])==TRUE,])
+```
+Total number of missing values is **`r NAs`**
 
+2. Devise a strategy for filling in all of the missing values in the dataset.
+
+- **Use the mean for 5-minute interval to impute missing data**
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r imputedata, echo=TRUE, results='hide'}
+## to impute use the average of each 5 minutes 
+## round to decimal point because the number of steps data is Integer
+library(data.table)
+rd_time2 <- cbind(rd_time[1], round(rd_time[2]))
+dt_time <-as.data.table(rd_time2)
+dt <-as.data.table(rd)
+setkey(dt_time, interval)
+setkey(dt, interval)
+##Merged data frame data
+ipdata <- as.data.frame(merge(dt, dt_time))
+##update NA data with the average
+ipdata[is.na(ipdata[2])==TRUE,2] <- ipdata[is.na(ipdata[2])==TRUE,4]
+```
+
+4. Histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+```{r ihist, echo=TRUE, results='hide'}
+ip_day <- aggregate(ipdata[2], ipdata[3], sum)
+xmin <- min(ip_day[2])
+xmax <- max(ip_day[2])
+xt <- "total number of steps"
+yt <- "number of days"
+mt <- "Histogram of total number of steps taken each day" 
+names(ip_day) = c("date", "steps")
+hist(ip_day[is.na(rd_day[2])==FALSE,2], breaks="fd",xlim=c(xmin, xmax), 
+     main = mt, xlab= xt, ylab=yt, col="Dark Red")
+## mean and median after imputing
+imn <- as.integer(mean(ip_day$steps))
+imd <- as.integer(median(ip_day$steps))
+```
+
+Mean is **`r imn`** and Median is **`r imd`**  
+(Before imputing, Mean is **`r mn`** and Median is **`r md`**)  
+
+
+
+5. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+**There is no significant difference of mean and median between before imputing and after inputing. As well, the shapa of Histogram is very alike. There is no impact of imputing of using the mean for 5-minute interval.**
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r weekdata, echo=TRUE, results='hide'}
+ip_week <- cbind(ip_day,weekdays(as.Date(ip_day[,1])))
+ip_week2 <- cbind(ip_week, ifelse(!weekdays(as.Date(ip_day[,1])) %in% c("Saturday", "Sunday"), "weekday","weekend"))
+names(ip_week2) <- c("date", "Steps", "dayofweek", 'week')
+
+## set weekday or weekend to imputed data
+dt2 <- as.data.table(ipdata[1:3])
+setkey(dt2, date)
+dt_ip2 <- as.data.table(ip_week2[c(1,4)])
+dt_ip <- as.data.frame(merge(dt2, dt_ip2))
+```
+
+
+2. Make a panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r weektimedata, echo=TRUE, results='hide'}
+## calculate steps by interval and weekday or weekend
+dt_time_week <- aggregate(dt_ip[3], c(dt_ip[4],dt_ip[2]), mean)
+par(mfrow=c(1,2))
+v_week <- "weekday"
+xt <- "time of day"
+yt <- "number of steps"
+mt <- paste(v_week, "- Average number of steps of \neach 5-minutes interval")
+plot(dt_time_week[dt_time_week[,1]==v_week,2], dt_time_week[dt_time_week[,1]==v_week,3], type='l',main = mt, ylim=c(0,250), cex.main=1, col="dark red", xlab= xt, ylab=yt)
+
+v_week <- "weekend"
+mt <- paste(v_week, "- Average number of steps of \neach 5-minutes interval") 
+plot(dt_time_week[dt_time_week[,1]==v_week,2], dt_time_week[dt_time_week[,1]==v_week,3], type='l',main = mt, ylim=c(0,250), cex.main=1, col="dark red", xlab= xt, ylab=yt)
+
+```
